@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>مدير الدخل والمصروفات</title>
+    
+    <!-- إعدادات التثبيت كبرنامج PWA على الموبايل -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="إدارة الأموال">
+    <meta name="theme-color" content="#f59e0b">
+    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/2921/2921222.png">
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        amber: {
+                            50: '#fffbeb',
+                            100: '#fef3c7',
+                            400: '#fbbf24',
+                            500: '#f59e0b',
+                            600: '#d97706',
+                            700: '#b45309',
+                        },
+                        slate: {
+                            700: '#334155',
+                            800: '#1e293b',
+                            900: '#0f172a',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Tajawal', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            font-family: 'Tajawal', sans-serif;
+            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+            min-height: 100vh;
+        }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        @media print {
+            body {
+                background: #ffffff !important;
+                color: #000000 !important;
+            }
+            .no-print {
+                display: none !important;
+            }
+            .print-only {
+                display: block !important;
+            }
+            .glass-card {
+                background: transparent !important;
+                border: none !important;
+                box-shadow: none !important;
+                padding: 0 !important;
+            }
+            .print-container {
+                width: 100% !important;
+                margin: 0 !important;
+                padding: 0 !important;
+            }
+            table {
+                width: 100% !important;
+                border-collapse: collapse !important;
+                margin-top: 15px !important;
+            }
+            th, td {
+                border: 1px solid #cbd5e1 !important;
+                padding: 8px 12px !important;
+                color: #000 !important;
+            }
+            th {
+                background-color: #f1f5f9 !important;
+            }
+        }
+        
+        .print-only {
+            display: none;
+        }
+    </style>
+</head>
+<body class="p-4 md:p-8 text-slate-800">
+
+    <!-- نافذة الشاشة الأولى (الاسم، كلمة المرور، وسؤال الأمان) -->
+    <div id="authModal" class="fixed inset-0 bg-slate-900/90 backdrop-blur-md z-50 flex items-center justify-center p-4 no-print">
+        <div class="bg-white rounded-2xl p-6 md:p-8 max-w-md w-full shadow-2xl border border-amber-500/25">
+            
+            <!-- نموذج تسجيل الدخول -->
+            <div id="loginView" class="space-y-4">
+                <div class="text-center mb-4">
+                    <div class="w-16 h-16 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center mx-auto mb-3 text-2xl">
+                        <i class="fa-solid fa-lock"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-slate-800">مرحباً بك مجدداً</h3>
+                    <p class="text-slate-500 text-sm mt-1">الرجاء إدخال كلمة المرور الخاصة لحفظ معاملاتك</p>
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-slate-700 mb-1">كلمة المرور</label>
+                    <input type="password" id="loginPasswordInput" placeholder="أدخل كلمة المرور..." class="w-full p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-amber-500 outline-none">
+                </div>
+                <p id="loginError" class="text-rose-500 text-xs hidden text-center">كلمة المرور غير صحيحة!</p>
+                <button onclick="handleLogin()" type="button" class="w-full bg-amber-500 hover:bg-amber-600 text-white font-bold py-3 rounded-xl transition duration-200">
+                    تسجيل الدخول
+                </button>
+                <div class="text-center pt-2 flex justify-between items-center text-xs">
+                    <button onclick="showForgotView()" type="button" class="text-amber-600 hover:underline font-semibold">هل نسيت كلمة المرور الخاصة بك؟</button>
+                    <button onclick="fullResetApp()" type="button" class="text-rose-500 hover:underline font-semibold">إعادة ضبط البيانات بالكامل</button>
+                </div>
+            </div>
+
+            <!-- نموذج التسجيل لأول مرة (الاسم + كلمة المرور + سؤال الأمان) -->
+            <div id="setupView" class="space-y-4 hidden">
+                <div class="text-center mb-4">
+                    <div class="w-16 h-16 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center mx-auto mb-3 text-2xl">
+                        <i class="fa-solid fa-user-shield"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-slate-800">إعداد التطبيق لأول مرة</h3>
+                    <p class="text-slate-500 text-sm mt-1">يرجى استكمال البيانات أدناه</p>
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-slate-700 mb-1">برجاء إدخال اسمك</label>
+                    <input type="text" id="setupUsernameInput" placeholder="أدخل اسم المستخدم هنا..." class="w-full p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-amber-500 outline-none">
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-slate-700 mb-1">كلمة المرور الخاصة لحفظ معاملاتك</label>
+                    <input type="password" id="setupPasswordInput" placeholder="أنشئ كلمة مرور..." class="w-full p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-amber-500 outline-none">
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-slate-700 mb-1">سؤال الأمان: ما هو لونك المفضل؟</label>
+                    <input type="text" id="setupSecAnswerInput" placeholder="اكتب إجابة لونك المفضل هنا..." class="w-full p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-amber-500 outline-none">
+                </div>
+                <button onclick="handleSetup()" type="button" class="w-full bg-amber-500 hover:bg-amber-600 text-white font-bold py-3 rounded-xl transition duration-200">
+                    حفظ ومتابعة
+                </button>
+            </div>
+
+            <!-- نموذج استعادة كلمة المرور عند نسيانها -->
+            <div id="forgotView" class="space-y-4 hidden">
+                <div class="text-center mb-4">
+                    <div class="w-16 h-16 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center mx-auto mb-3 text-2xl">
+                        <i class="fa-solid fa-key"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-slate-800">استعادة كلمة المرور</h3>
+                    <p class="text-slate-500 text-sm mt-1">أجب على سؤال الأمان وقم بتعيين كلمة مرور جديدة</p>
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-slate-700 mb-1">سؤال الأمان: ما هو لونك المفضل؟</label>
+                    <input type="text" id="forgotAnswerInput" placeholder="اكتب إجابة لونك المفضل..." class="w-full p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-amber-500 outline-none">
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-slate-700 mb-1">كلمة المرور الجديدة</label>
+                    <input type="password" id="newPasswordInput" placeholder="أدخل كلمة المرور الجديدة..." class="w-full p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-amber-500 outline-none">
+                </div>
+                <p id="forgotError" class="text-rose-500 text-xs hidden text-center">إجابة سؤال الأمان غير صحيحة!</p>
+                <button onclick="handleResetPassword()" type="button" class="w-full bg-amber-500 hover:bg-amber-600 text-white font-bold py-3 rounded-xl transition duration-200">
+                    إعادة تعيين والدخول
+                </button>
+                <div class="text-center pt-2">
+                    <button onclick="showLoginView()" type="button" class="text-xs text-slate-500 hover:underline">العودة لتسجيل الدخول</button>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <div class="max-w-6xl mx-auto space-y-6 print-container">
+        
+        <!-- الترويسة العلوية -->
+        <header class="glass-card rounded-2xl p-6 shadow-xl flex flex-col md:flex-row justify-between items-center gap-4">
+            <div class="flex items-center gap-3">
+                <div class="p-3 bg-amber-500 text-white rounded-xl shadow-lg no-print">
+                    <i class="fa-solid fa-wallet text-2xl"></i>
+                </div>
+                <div>
+                    <h1 class="text-2xl font-extrabold text-slate-800">إدارة الدخل والمصروفات</h1>
+                    <div class="flex items-center gap-2 text-sm text-slate-500">
+                        <span>المسؤول: <strong id="displayUsername" class="text-slate-700">----</strong></span>
+                        <button onclick="openSetupModalToEdit()" type="button" class="text-amber-600 hover:text-amber-700 text-xs font-bold no-print underline">
+                            (تعديل البيانات)
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- أزرار التحكم والطباعة -->
+            <div class="flex items-center gap-3 w-full md:w-auto no-print">
+                <button onclick="exportPDF()" type="button" class="flex-1 md:flex-none px-5 py-2.5 bg-amber-500 hover:bg-amber-600 text-white font-bold rounded-xl shadow-md transition flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-file-pdf"></i>
+                    تصدير تقرير (PDF)
+                </button>
+                <button onclick="resetData()" type="button" title="مسح الحسابات والعمليات" class="px-4 py-2.5 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold rounded-xl transition">
+                    <i class="fa-solid fa-rotate-right"></i>
+                </button>
+                <button onclick="lockApp()" type="button" title="قفل التطبيق" class="px-4 py-2.5 bg-rose-100 hover:bg-rose-200 text-rose-700 font-bold rounded-xl transition">
+                    <i class="fa-solid fa-lock"></i>
+                </button>
+            </div>
+        </header>
+
+        <!-- الترويسة المخصصة لطباعة التقرير فقط -->
+        <div class="print-only mb-6">
+            <div class="flex justify-between items-center border-b border-slate-300 pb-4 mb-4">
+                <div>
+                    <h1 class="text-2xl font-bold text-slate-900">تقرير الحسابات المالي</h1>
+                    <p class="text-sm text-slate-600">ملخص الدخل والمصروفات والعمليات المسجلة</p>
+                </div>
+                <div class="text-left text-sm text-slate-600">
+                    <p>التاريخ: <span id="printDate"></span></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- ملخص الإحصائيات -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="glass-card rounded-2xl p-5 shadow-lg border-r-4 border-emerald-500">
+                <div class="flex justify-between items-center text-slate-500 text-sm font-semibold mb-2">
+                    <span>إجمالي الدخل</span>
+                    <i class="fa-solid fa-arrow-down-left text-emerald-500"></i>
+                </div>
+                <div id="totalIncome" class="text-2xl font-black text-emerald-600">0.00 ر.س</div>
+            </div>
+
+            <div class="glass-card rounded-2xl p-5 shadow-lg border-r-4 border-rose-500">
+                <div class="flex justify-between items-center text-slate-500 text-sm font-semibold mb-2">
+                    <span>إجمالي المصروفات</span>
+                    <i class="fa-solid fa-arrow-up-right text-rose-500"></i>
+                </div>
+                <div id="totalExpense" class="text-2xl font-black text-rose-600">0.00 ر.س</div>
+            </div>
+
+            <div class="glass-card rounded-2xl p-5 shadow-lg border-r-4 border-amber-500">
+                <div class="flex justify-between items-center text-slate-500 text-sm font-semibold mb-2">
+                    <span>صافي الرصيد</span>
+                    <i class="fa-solid fa-scale-balanced text-amber-500"></i>
+                </div>
+                <div id="netBalance" class="text-2xl font-black text-slate-800">0.00 ر.س</div>
+            </div>
+        </div>
+
+        <!-- قسم النماذج والرسم البياني -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 no-print">
+            
+            <div class="glass-card rounded-2xl p-6 shadow-xl lg:col-span-1">
+                <h2 class="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
+                    <i class="fa-solid fa-plus-circle text-amber-500"></i>
+                    إضافة عملية جديدة
+                </h2>
+                <form id="transactionForm" onsubmit="handleAdd(event)" class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-1">نوع العملية</label>
+                        <select id="type" class="w-full p-3 bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-amber-500 outline-none">
+                            <option value="income">دخل (+)</option>
+                            <option value="expense">مصروف (-)</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-1">المبلغ (ر.س)</label>
+                        <input type="number" step="0.01" id="amount" placeholder="0.00" required class="w-full p-3 bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-amber-500 outline-none">
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-1">التاريخ</label>
+                        <input type="date" id="date" required class="w-full p-3 bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-amber-500 outline-none">
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-1">السبب / الوصف</label>
+                        <input type="text" id="reason" placeholder="مثال: راتب، إيجار، صيانة..." required class="w-full p-3 bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-amber-500 outline-none">
+                    </div>
+
+                    <button type="submit" class="w-full bg-slate-800 hover:bg-slate-900 text-white font-bold py-3 rounded-xl transition shadow-lg">
+                        حفظ العملية
+                    </button>
+                </form>
+            </div>
+
+            <div class="glass-card rounded-2xl p-6 shadow-xl lg:col-span-2 flex flex-col justify-center items-center">
+                <h2 class="text-lg font-bold text-slate-800 mb-2 w-full text-right flex items-center gap-2">
+                    <i class="fa-solid fa-chart-pie text-amber-500"></i>
+                    مقارنة الدخل والمصروفات
+                </h2>
+                <div class="w-full max-w-md h-64">
+                    <canvas id="financeChart"></canvas>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- جدول العمليات -->
+        <div class="glass-card rounded-2xl p-6 shadow-xl">
+            <h2 class="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2 no-print">
+                <i class="fa-solid fa-list-check text-amber-500"></i>
+                سجل العمليات المسجلة
+            </h2>
+
+            <div class="overflow-x-auto">
+                <table class="w-full text-right border-collapse">
+                    <thead>
+                        <tr class="bg-slate-100/80 text-slate-700 border-b border-slate-200">
+                            <th class="p-3">النوع</th>
+                            <th class="p-3">المبلغ</th>
+                            <th class="p-3">التاريخ</th>
+                            <th class="p-3">السبب / البيان</th>
+                            <th class="p-3 text-center no-print">إجراء</th>
+                        </tr>
+                    </thead>
+                    <tbody id="transactionList" class="divide-y divide-slate-200">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- قسم التوقيع -->
+        <div class="print-only mt-12 pt-6">
+            <div class="flex justify-center items-center">
+                <div class="text-center w-64 border-t border-slate-400 pt-2">
+                    <p class="font-bold text-slate-800">توقيع المسؤول</p>
+                    <p id="signatureName" class="text-slate-700 font-semibold mt-1">-------------------</p>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        let transactions = JSON.parse(localStorage.getItem('transactions')) || [];
+        let username = localStorage.getItem('appUsername') || '';
+        let appPass = localStorage.getItem('appPassword') || '';
+        let secAnswer = localStorage.getItem('secAnswer') || '';
+        let myChart = null;
+
+        window.onload = function() {
+            document.getElementById('date').valueAsDate = new Date();
+            document.getElementById('printDate').innerText = new Date().toLocaleDateString('ar-SA');
+            
+            // إذا لم تقم بإعداد الحساب نهائياً، أظهر نافذة التسجيل الأولى
+            if (!appPass || !username) {
+                showSetupView();
+            } else {
+                showLoginView();
+            }
+
+            initChart();
+            render();
+        };
+
+        function showLoginView() {
+            document.getElementById('authModal').classList.remove('hidden');
+            document.getElementById('loginView').classList.remove('hidden');
+            document.getElementById('setupView').classList.add('hidden');
+            document.getElementById('forgotView').classList.add('hidden');
+            document.getElementById('loginError').classList.add('hidden');
+        }
+
+        function showSetupView() {
+            document.getElementById('authModal').classList.remove('hidden');
+            document.getElementById('loginView').classList.add('hidden');
+            document.getElementById('setupView').classList.remove('hidden');
+            document.getElementById('forgotView').classList.add('hidden');
+            document.getElementById('setupUsernameInput').value = username;
+        }
+
+        function showForgotView() {
+            document.getElementById('authModal').classList.remove('hidden');
+            document.getElementById('loginView').classList.add('hidden');
+            document.getElementById('setupView').classList.add('hidden');
+            document.getElementById('forgotView').classList.remove('hidden');
+            document.getElementById('forgotError').classList.add('hidden');
+        }
+
+        function handleLogin() {
+            const inputPass = document.getElementById('loginPasswordInput').value;
+            if (inputPass === appPass) {
+                document.getElementById('authModal').classList.add('hidden');
+                document.getElementById('loginPasswordInput').value = '';
+                updateUsernameDisplay();
+            } else {
+                document.getElementById('loginError').classList.remove('hidden');
+            }
+        }
+
+        function handleSetup() {
+            const user = document.getElementById('setupUsernameInput').value.trim();
+            const pass = document.getElementById('setupPasswordInput').value.trim();
+            const ans = document.getElementById('setupSecAnswerInput').value.trim().toLowerCase();
+
+            if (user && pass && ans) {
+                username = user;
+                appPass = pass;
+                secAnswer = ans;
+
+                localStorage.setItem('appUsername', username);
+                localStorage.setItem('appPassword', appPass);
+                localStorage.setItem('secAnswer', secAnswer);
+
+                document.getElementById('authModal').classList.add('hidden');
+                updateUsernameDisplay();
+            } else {
+                alert('الرجاء تعبئة جميع الحقول المطلوبة (اسمك، كلمة المرور، ولونك المفضل)');
+            }
+        }
+
+        function handleResetPassword() {
+            const ansInput = document.getElementById('forgotAnswerInput').value.trim().toLowerCase();
+            const newPass = document.getElementById('newPasswordInput').value.trim();
+
+            if (ansInput === secAnswer) {
+                if (newPass) {
+                    appPass = newPass;
+                    localStorage.setItem('appPassword', appPass);
+                    alert('تم تغيير كلمة المرور بنجاح!');
+                    document.getElementById('authModal').classList.add('hidden');
+                    document.getElementById('forgotAnswerInput').value = '';
+                    document.getElementById('newPasswordInput').value = '';
+                    updateUsernameDisplay();
+                } else {
+                    alert('يرجى كتابة كلمة المرور الجديدة');
+                }
+            } else {
+                document.getElementById('forgotError').classList.remove('hidden');
+            }
+        }
+
+        function lockApp() {
+            showLoginView();
+        }
+
+        function openSetupModalToEdit() {
+            showSetupView();
+        }
+
+        function fullResetApp() {
+            if (confirm('هل أنت متأكد من مسح كافة بيانات الحساب وإعادة ضبط الشاشة الأولى؟')) {
+                localStorage.clear();
+                location.reload();
+            }
+        }
+
+        function updateUsernameDisplay() {
+            document.getElementById('displayUsername').innerText = username || 'المسؤول';
+            document.getElementById('signatureName').innerText = username || 'المسؤول';
+        }
+
+        function handleAdd(e) {
+            e.preventDefault();
+            const type = document.getElementById('type').value;
+            const amount = parseFloat(document.getElementById('amount').value);
+            const date = document.getElementById('date').value;
+            const reason = document.getElementById('reason').value;
+
+            if (amount && date && reason) {
+                transactions.push({ id: Date.now(), type, amount, date, reason });
+                saveAndRender();
+                document.getElementById('transactionForm').reset();
+                document.getElementById('date').valueAsDate = new Date();
+            }
+        }
+
+        function deleteTransaction(id) {
+            transactions = transactions.filter(t => t.id !== id);
+            saveAndRender();
+        }
+
+        function resetData() {
+            if (confirm('هل أنت متأكد من مسح جميع المعاملات المسجلة؟')) {
+                transactions = [];
+                saveAndRender();
+            }
+        }
+
+        function saveAndRender() {
+            localStorage.setItem('transactions', JSON.stringify(transactions));
+            render();
+        }
+
+        function render() {
+            const list = document.getElementById('transactionList');
+            list.innerHTML = '';
+
+            let income = 0;
+            let expense = 0;
+
+            transactions.sort((a, b) => new Date(b.date) - new Date(a.date)).forEach(t => {
+                if (t.type === 'income') income += t.amount;
+                else expense += t.amount;
+
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-50/50 transition";
+                tr.innerHTML = `
+                    <td class="p-3">
+                        <span class="px-2.5 py-1 rounded-full text-xs font-bold ${t.type === 'income' ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}">
+                            ${t.type === 'income' ? 'دخل' : 'مصروف'}
+                        </span>
+                    </td>
+                    <td class="p-3 font-bold ${t.type === 'income' ? 'text-emerald-600' : 'text-rose-600'}">
+                        ${t.amount.toFixed(2)} ر.س
+                    </td>
+                    <td class="p-3 text-slate-600 text-sm">${t.date}</td>
+                    <td class="p-3 text-slate-800 font-medium">${t.reason}</td>
+                    <td class="p-3 text-center no-print">
+                        <button onclick="deleteTransaction(${t.id})" class="text-rose-500 hover:text-rose-700 p-1">
+                            <i class="fa-solid fa-trash-can"></i>
+                        </button>
+                    </td>
+                `;
+                list.appendChild(tr);
+            });
+
+            document.getElementById('totalIncome').innerText = income.toFixed(2) + ' ر.س';
+            document.getElementById('totalExpense').innerText = expense.toFixed(2) + ' ر.س';
+            document.getElementById('netBalance').innerText = (income - expense).toFixed(2) + ' ر.س';
+
+            updateChart(income, expense);
+        }
+
+        function initChart() {
+            const ctx = document.getElementById('financeChart').getContext('2d');
+            myChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['الدخل', 'المصروفات'],
+                    datasets: [{
+                        data: [0, 0],
+                        backgroundColor: ['#f59e0b', '#334155'],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom' }
+                    }
+                }
+            });
+        }
+
+        function updateChart(income, expense) {
+            if (myChart) {
+                myChart.data.datasets[0].data = [income, expense];
+                myChart.update();
+            }
+        }
+
+        function exportPDF() {
+            window.print();
+        }
+    </script>
+</body>
+</html>
