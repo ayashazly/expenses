@@ -2,12 +2,15 @@
   "id": "finance-tracker-app-2026",
   "name": "إدارة الدخل والمصروفات",
   "short_name": "المالية",
-  "description": "تطبيق مخصص لإدارة وتتبع الدخل والمصروفات الشخصية مع إمكانية تصدير التقارير بصيغة PDF",
+  "description": "تطبيق مخصص لإدارة وتتبع الدخل والمصروفات الشخصية وتصدير التقارير بصيغة PDF",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#0f172a",
   "theme_color": "#f59e0b",
+  "lang": "ar",
+  "dir": "rtl",
   "categories": ["finance", "productivity", "utilities"],
   "icons": [
     {
